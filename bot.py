@@ -1,4 +1,4 @@
-import random, re, os, json, copy
+import random, re, os, json, copy, time
 import asyncio
 import aiohttp
 import discord
@@ -6,6 +6,9 @@ from discord import Game
 from discord.ext.commands import Bot
 
 BOT_PREFIX = ("!")
+keywords_delay = 1
+everyone_admin = False
+
 client = Bot(command_prefix=BOT_PREFIX)
 
 config_file = 'config.json'
@@ -13,6 +16,7 @@ config = {}
 
 musicChannel = None
 musicPlayer = None
+
 
 ##### FUNCTIONS #####
 
@@ -57,15 +61,24 @@ async def playYoutubeMusic(url, channels):
             musicPlayer = await musicChannel.create_ytdl_player(url, after=stopMusicPlayer)
             musicPlayer.start()
 
+def commandAdmin(*p, **pn):
+    pn['pass_context'] = True
+    def decorated(func):
+        async def wrapper(context, *args, **kwargs):
+            if not context.message.author.id in config['admins'] and not everyone_admin:
+                return False
+            return await func(context, *args, **kwargs)
+        return client.command(*p, **pn)(wrapper)
+    return decorated
+
 ##### COMMANDS #####
 
 # Music
 
-@client.command(name='add-music',
+@commandAdmin(name='add-music',
                 brief="Add music",
                 description="Add a music from youtube url",
-                aliases=['add'],
-                pass_context=True)
+                aliases=['add'])
 async def addMusic(context, songname, url):
     if not re.match(r'^[a-zA-Z_0-9]+$', songname):
         return await client.say('Un tel nom n\'est pas concevable, humain, même si cela dépasse ton entendement')
@@ -91,8 +104,8 @@ async def playMusic(context, songname):
         return await client.say("Stupide humain, cette musique n'existe pas !")
     await playYoutubeMusic(config['music'][songname]['url'], context.message.server.channels)
 
-@client.command(name='stop-music', aliases=['stop'])
-async def stopMusic():
+@commandAdmin(name='stop-music', aliases=['stop'])
+async def stopMusic(context):
     stopMusicPlayer()
 
 @client.command(name='list-musics')
@@ -105,17 +118,30 @@ async def list_musics():
 async def say(text):
     await client.say(text)
 
+@client.command(name='send-to', brief="Send message to channel")
+async def sendTo(channel_id, message):
+    await client.send_message(discord.Object(id=channel_id), message)
+
 @client.command(name='image')
 async def sendImage(url):
     image = discord.Embed(colour=0xFF0000)
     image.set_image(url=url)
     await client.say(embed=image)
 
+@client.command(name='lost', pass_context=True)
+async def sendYouLost(context):
+    l = [
+        "Tu as perdu, {0}",
+        "You lost THE GAME, {0}",
+        "{0}: PERDU ! Hahaha !",
+    ]
+    await client.say(random.choice(l).format(context.message.author.mention))
+
 # Keywords
 
 @client.command(name='add-keyword', aliases=['match'])
 async def addKeyword(keyword, command):
-    keyword = str(keyword)
+    keyword = str(keyword).lower()
     if keyword in config['aliases']:
         return await client.say("Je le sais déjà, stupide humain")
     if not keyword in config['keywords']:
@@ -130,7 +156,7 @@ async def addKeyword(keyword, command):
 
 @client.command(name='add-alias', aliases=['alias'])
 async def addAlias(keyword, aliasOf):
-    keyword = str(keyword)
+    keyword = str(keyword).lower()
     if keyword in config['keywords'] or keyword in config['aliases']:
         return await client.say("Pauvre humain, ne sait tu pas que sous mon règne absolu, {0} a déjà un pouvoir ?".format(keyword))
     
@@ -140,12 +166,25 @@ async def addAlias(keyword, aliasOf):
 
 ##### EVENTS #####
 
+lastUsedWord = {}
 async def useKeyword(message, key):
     if key in config['keywords']:
+        if key in lastUsedWord and time.time() - lastUsedWord[key] < keywords_delay:
+            return
+        lastUsedWord[key] = time.time()
         for cmd in config['keywords'][key]:
             fakeMessage = copy.deepcopy(message)
             fakeMessage.content = cmd
             await client.process_commands(fakeMessage)
+
+async def sayItsMe(message):
+    l = [
+        "C'est moi !",
+        "Votre maitre répond a l'appel",
+        "Je suis celle dont vous parlez",
+        "Oui, être insignifiant"
+    ]
+    await client.send_message(message.channel, random.choice(l))
 
 @client.event
 async def on_ready():
@@ -166,13 +205,14 @@ async def on_message(message):
         await client.process_commands(message)
     elif message.author != client.user:
         for key in config['keywords']:
-            if key in msg_text:
+            if key.lower() in msg_text:
                 await useKeyword(message, key)
         for key in config['aliases']:
-            if key in msg_text:
+            if key.lower() in msg_text:
                 await useKeyword(message, config['aliases'][key])
 
-                
+        if client.user.id in message.raw_mentions:
+            await sayItsMe(message)
 
 
 async def list_servers():
@@ -195,8 +235,8 @@ finally:
         config['keywords'] = {}
     if not 'aliases' in config:
         config['aliases'] = {}
-
-print("CONFIG: ", config)
+    if not 'admins' in config:
+        config['admins'] = ['211191341533757440']
 
 client.loop.create_task(list_servers())
 client.run(input())
