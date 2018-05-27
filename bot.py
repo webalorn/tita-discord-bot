@@ -7,6 +7,7 @@ from discord.ext.commands import Bot
 
 BOT_PREFIX = ("!")
 keywords_delay = 1
+before_contest = 60*60*2
 everyone_admin = False
 
 client = Bot(command_prefix=BOT_PREFIX)
@@ -58,6 +59,7 @@ async def playYoutubeMusic(url, channels):
         if choosen:
             if not musicChannel:
                 musicChannel = await client.join_voice_channel(choosen)
+            musicPlayer = True
             musicPlayer = await musicChannel.create_ytdl_player(url, after=stopMusicPlayer)
             musicPlayer.start()
 
@@ -66,7 +68,7 @@ def commandAdmin(*p, **pn):
     def decorated(func):
         async def wrapper(context, *args, **kwargs):
             if not context.message.author.id in config['admins'] and not everyone_admin:
-                return False
+                client.say("Oserais-tu te croire supérieur a moi, humain ?")
             return await func(context, *args, **kwargs)
         return client.command(*p, **pn)(wrapper)
     return decorated
@@ -274,6 +276,50 @@ async def list_servers():
             print(server.name)
         await asyncio.sleep(600)
 
+async def quit_voice_channels():
+    global musicChannel, musicPlayer
+    await client.wait_until_ready()
+    while not client.is_closed:
+        if musicChannel and not musicPlayer:
+            await musicChannel.disconnect()
+            musicChannel = None
+        await asyncio.sleep(2)
+
+contest_sended = []
+async def background_tasks():
+    global musicChannel, musicPlayer, contest_sended
+    await client.wait_until_ready()
+    while not client.is_closed:
+
+        # Codeforces
+        async with aiohttp.get('http://codeforces.com/api/contest.list') as r:
+            if r.status == 200:
+                content = await r.json()
+
+                nextContests = [contest for contest in content['result'] if contest['phase'] == "BEFORE"]
+                nextContests = [contest for contest in nextContests if contest['relativeTimeSeconds'] >= -1 * before_contest]
+
+                if len(nextContests):
+                    for server in client.servers:
+                        for channel in server.channels:
+                            if channel.name == 'general':
+                                for contest in nextContests:
+                                    if contest['id'] in contest_sended:
+                                        continue
+                                    seconds = -1*contest['relativeTimeSeconds']
+                                    duree = time.strftime(
+                                        '%Hh %M min' if seconds < 60*60*24 else '%d jours %Hh %M min',
+                                        time.gmtime(seconds)
+                                    )
+                                    await client.send_message(channel, contest['name']
+                                            + " dans "
+                                            + duree
+                                        )
+                    contest_sended = [contest['id'] for contest in nextContests]
+                    save_config()
+
+        await asyncio.sleep(5*60)
+
 try:
     with open(config_file) as f:
         config = json.load(f)
@@ -292,4 +338,6 @@ finally:
         config['admins'] = ['211191341533757440']
 
 client.loop.create_task(list_servers())
+client.loop.create_task(quit_voice_channels())
+client.loop.create_task(background_tasks())
 client.run(input())
