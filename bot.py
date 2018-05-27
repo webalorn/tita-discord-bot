@@ -43,6 +43,19 @@ def stopMusicPlayer():
         musicPlayer.stop()
     musicPlayer = None
 
+async def muteBots(state=True):
+    for name in ['AdrienBot']:
+        user = getUserByName(name)
+        if user:
+            await client.server_voice_state(user, mute=state)
+
+async def quit_music_if_needed():
+    global musicChannel, musicPlayer
+    if musicChannel and not musicPlayer:
+        await musicChannel.disconnect()
+        musicChannel = None
+        await muteBots(False)
+
 async def playYoutubeMusic(url, channels):
     global musicChannel, musicPlayer
 
@@ -63,6 +76,7 @@ async def playYoutubeMusic(url, channels):
             musicPlayer = True
             musicPlayer = await musicChannel.create_ytdl_player(url, after=stopMusicPlayer)
             musicPlayer.start()
+            await muteBots()
 
 def commandAdmin(*p, **pn):
     pn['pass_context'] = True
@@ -113,8 +127,8 @@ async def playMusic(context, songname):
         return await client.say("Stupide humain, cette musique n'existe pas !")
     await playYoutubeMusic(config['music'][songname]['url'], context.message.server.channels)
 
-@commandAdmin(name='stop-music', aliases=['stop'], brief="[ADMIN]")
-async def stopMusic(context):
+@client.command(name='stop-music', aliases=['stop'])
+async def stopMusic():
     stopMusicPlayer()
 
 @client.command(name='list-musics')
@@ -234,6 +248,22 @@ async def sendCookie(context, user_name, message=None):
     else:
         await client.say("Je ne vois pas de qui tu veux parler... Cherches-tu a me duper ?")
 
+# Reactions
+
+@client.command(name='add-reaction', aliases=['react'])
+async def add_raction(username, emoji):
+    if not username in config['reactions']:
+        config['reactions'][username] = []
+    config['reactions'][username].append(emoji)
+    save_config()
+    await client.say("{0} est désormait marqué d'un {1}".format(username, emoji))
+
+@client.command(name='rm-reactions')
+async def add_raction(username):
+    if username in config['reactions']:
+        del config['reactions'][username]
+    await client.say("Je serais dorénavant de marbre face à {0}".format(username))
+    
 # Sepecial messages
 
 @client.command()
@@ -274,32 +304,39 @@ async def sayItsMe(message):
 @client.event
 async def on_ready():
     await client.change_presence(game=Game(name="to rule human world"))
+    await muteBots(False)
     print("Logged in as " + client.user.name)
 
 @client.event
 async def on_message(message):
     global musicChannel, musicPlayer
 
-    print(message.author.name, ':', message.content)
+    if message.channel.is_private:
+        print(message.author.name, ':', message.content)
 
     msg_text = message.clean_content.lower()
 
     if msg_text[:1] in BOT_PREFIX:
         await client.process_commands(message)
-    elif message.author != client.user:
-        for key in config['keywords']:
-            if key.lower() in msg_text:
-                await useKeyword(message, key)
-        for key in config['aliases']:
-            if key.lower() in msg_text:
-                await useKeyword(message, config['aliases'][key])
+    else:
+        if message.author.name in config['reactions']:
+            for emoji in config['reactions'][message.author.name]:
+                await client.add_reaction(message, emoji)
 
-        if client.user.id in message.raw_mentions:
-            await sayItsMe(message)
+        if message.author != client.user:
+            for key in config['keywords']:
+                if key.lower() in msg_text:
+                    await useKeyword(message, key)
+            for key in config['aliases']:
+                if key.lower() in msg_text:
+                    await useKeyword(message, config['aliases'][key])
 
-    if musicChannel and not musicPlayer:
-        await musicChannel.disconnect()
-        musicChannel = None
+            if client.user.id in message.raw_mentions:
+                await sayItsMe(message)
+
+    await quit_music_if_needed()
+
+# Background tasks
 
 async def list_servers():
     await client.wait_until_ready()
@@ -310,12 +347,9 @@ async def list_servers():
         await asyncio.sleep(600)
 
 async def quit_voice_channels():
-    global musicChannel, musicPlayer
     await client.wait_until_ready()
     while not client.is_closed:
-        if musicChannel and not musicPlayer:
-            await musicChannel.disconnect()
-            musicChannel = None
+        await quit_music_if_needed()
         await asyncio.sleep(2)
 
 contest_sended = []
@@ -364,10 +398,12 @@ finally:
         config['aliases'] = {}
     if not 'random' in config:
         config['random'] = {}
+    if not 'reactions' in config:
+        config['reactions'] = {}
     if not 'admins' in config:
         config['admins'] = ['211191341533757440']
 
-client.loop.create_task(list_servers())
+# client.loop.create_task(list_servers())
 client.loop.create_task(quit_voice_channels())
 client.loop.create_task(background_tasks())
 client.run(input())
