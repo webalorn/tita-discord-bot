@@ -6,7 +6,7 @@ from discord import Game
 from discord.ext.commands import Bot
 
 BOT_PREFIX = ("!")
-keywords_delay = 0.5
+keywords_delay = 1
 everyone_admin = False
 
 client = Bot(command_prefix=BOT_PREFIX)
@@ -217,9 +217,13 @@ async def removeRandomCategory(context, category):
 lastUsedWord = {}
 async def useKeyword(message, key):
     if key in config['keywords']:
-        if key in lastUsedWord and time.time() - lastUsedWord[key] < keywords_delay:
+        user_id = str(message.author.id)
+        if not key in lastUsedWord:
+            lastUsedWord[key] = {}
+        if user_id in lastUsedWord[key] and time.time() - lastUsedWord[key][user_id] < keywords_delay:
             return
-        lastUsedWord[key] = time.time()
+
+        lastUsedWord[key][user_id] = time.time()
         for cmd in config['keywords'][key]:
             fakeMessage = copy.deepcopy(message)
             fakeMessage.content = cmd
