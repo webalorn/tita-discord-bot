@@ -1,4 +1,5 @@
 import random, re, os, json, copy, time
+import html.parser
 import asyncio
 import aiohttp
 import discord
@@ -68,7 +69,7 @@ def commandAdmin(*p, **pn):
     def decorated(func):
         async def wrapper(context, *args, **kwargs):
             if not context.message.author.id in config['admins'] and not everyone_admin:
-                client.say("Oserais-tu te croire supérieur a moi, humain ?")
+                return await client.say("Oserais-tu te croire supérieur a moi, humain ?")
             return await func(context, *args, **kwargs)
         return client.command(*p, **pn)(wrapper)
     return decorated
@@ -77,6 +78,12 @@ def getRandomSentence(category):
     if category in config['random'] and len(config['random'][category]):
         return random.choice(config['random'][category])
     return "J'en reste sans voix :-*"
+
+def getUserByName(user_name):
+    for server in client.servers:
+        for user in server.members:
+            if user.name == user_name:
+                return user
 
 ##### COMMANDS #####
 
@@ -214,6 +221,30 @@ async def removeRandomCategory(context, category):
     save_config()
     await client.say('Finalement, je ne dirait plus rien de {0}'.format(category))
 
+# Direct messages
+
+@client.command(name='cookie', pass_context=True)
+async def sendCookie(context, user_name, message=None):
+    user = getUserByName(user_name)
+    if user:
+        await client.send_message(user, "Tient, un :cookie: cookie :cookie: de la part de... Ho, ça serait trop facile")
+        if message:
+            await client.send_message(user, "Au fait, j'ai trouvé ça avec le cookie: {0}".format(message))
+        await client.say("J'ai bien envoyé ce cookie")
+    else:
+        await client.say("Je ne vois pas de qui tu veux parler... Cherches-tu a me duper ?")
+
+# Sepecial messages
+
+@client.command()
+async def chuck_norris():
+    async with aiohttp.get('https://www.chucknorrisfacts.fr/api/get?data=tri:alea;type:txt;nb:1;') as r:
+        if r.status == 200:
+            fact = await r.json()
+            fact = fact[0]["fact"]
+            fact = html.parser.HTMLParser().unescape(fact)
+            await client.say(fact)
+
 ##### EVENTS #####
 
 lastUsedWord = {}
@@ -248,6 +279,8 @@ async def on_ready():
 @client.event
 async def on_message(message):
     global musicChannel, musicPlayer
+
+    print(message.author.name, ':', message.content)
 
     msg_text = message.clean_content.lower()
 
@@ -311,10 +344,7 @@ async def background_tasks():
                                         '%Hh %M min' if seconds < 60*60*24 else '%d jours %Hh %M min',
                                         time.gmtime(seconds)
                                     )
-                                    await client.send_message(channel, contest['name']
-                                            + " dans "
-                                            + duree
-                                        )
+                                    await client.send_message(channel, '@everyone: {0} dans {1}'.format(contest['name'], duree))
                     contest_sended = [contest['id'] for contest in nextContests]
                     save_config()
 
