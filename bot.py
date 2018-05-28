@@ -22,6 +22,16 @@ musicPlayer = None
 
 ##### FUNCTIONS #####
 
+async def fakeCommand(initialMessage, command):
+    command = str(command).strip()
+    if not command[:1] == "!":
+        return await client.send_message(initialMessage.channel, command)
+    fakeMessage = copy.deepcopy(initialMessage)
+    fakeMessage.content = command
+    fakeMessage.mentions = []
+    fakeMessage.mention_everyone = False
+    return await client.process_commands(fakeMessage)
+
 def youtube_url_validation(url):
     youtube_regex = (
         r'(https?://)?(www\.)?'
@@ -104,6 +114,12 @@ def getUserByName(user_name):
             if user.name == user_name:
                 return user
 
+async def bot_say(random_category, *p, **pn):
+    return await client.say(getRandomSentence(random_category).format(*p, **pn))
+
+async def bot_send(channel, random_category, *p, **pn):
+    return await client.send_message(channel, getRandomSentence(random_category).format(*p, **pn))
+
 # Jokes
 
 class JokesDb:
@@ -172,12 +188,10 @@ async def sendImage(url):
 
 @client.command(name='lost', pass_context=True)
 async def sendYouLost(context):
-    l = [
-        "Tu as perdu, {0}",
-        "You lost THE GAME, {0}",
-        "{0}: PERDU ! Hahaha !",
-    ]
-    await client.say(random.choice(l).format(context.message.author.mention))
+    mentions = [u.mention for u in context.message.mentions] or [context.message.author.mention]
+    if context.message.mention_everyone:
+        mentions = ['@everyone']
+    await bot_say('bot_lost', ", ".join(mentions))
 
 # Keywords
 
@@ -189,16 +203,21 @@ async def addKeyword(keyword, command):
     if not keyword in config['keywords']:
         config['keywords'][keyword] = []
 
-    if command[:1] != '!':
-        command = '!' + command
-
     config['keywords'][keyword].append(command)
     save_config()
     await client.say('Je serais bientot plus reactif a tout les {0}'.format(keyword))
 
-@client.command(name='list-keywords')
-async def listKeywords():
-    await client.say('Je connais le sens absolu de: {0}'.format(", ".join("**{0}**".format(m) for m in config['keywords'].keys())))
+@client.command(name='list-keywords', aliases=['list-match'])
+async def listKeywords(category=None):
+    if not category:
+        await client.say('Je connais le sens absolu de: {0}'.format(", ".join("**{0}**".format(m) for m in config['keywords'].keys())))
+    else:
+        if category in config['keywords']:
+            await client.say('Voici le pouvoir de {0}:'.format(category))
+            for action in config['keywords'][category]:
+                await client.say('- {0}'.format(action))
+        else:
+            bot_say('bot_confused')
 
 @commandAdmin(name='rm-keyword', brief="[ADMIN]")
 async def removeKeyword(context, keyword):
@@ -240,9 +259,9 @@ async def addRandom(category, sentence):
     save_config()
     await client.say('Ainsi, {0} pourra signifier {1}'.format(category, sentence))
 
-@client.command(name='random')
-async def randomSaySenetence(category):
-    await client.say(getRandomSentence(category))
+@client.command(name='random', pass_context=True)
+async def randomSaySenetence(context, category):
+    await fakeCommand(context.message, getRandomSentence(category))
 
 @client.command(name='list-random')
 async def getRandomCategoryList():
@@ -283,15 +302,15 @@ async def getCodeforcesProblem(tag=None):
 
 # Reactions
 
-@client.command(name='add-reaction', aliases=['react-user'])
-async def add_raction(username, emoji):
+@client.command(name='react-user', aliases=['on-user', 'on'])
+async def add_raction(username, command):
     if not username in config['reactions']:
         config['reactions'][username] = []
-    config['reactions'][username].append(emoji)
+    config['reactions'][username].append(command)
     save_config()
-    await client.say("{0} est désormait marqué d'un {1}".format(username, emoji))
+    await client.say("{0} est désormait marqué par {1}".format(username, command))
 
-@client.command(name='rm-reactions')
+@client.command(name='rm-reactions', aliases=['rm-on', 'clear'])
 async def add_raction(username):
     if username in config['reactions']:
         del config['reactions'][username]
@@ -328,18 +347,10 @@ async def useKeyword(message, key):
 
         lastUsedWord[key][user_id] = time.time()
         for cmd in config['keywords'][key]:
-            fakeMessage = copy.deepcopy(message)
-            fakeMessage.content = cmd
-            await client.process_commands(fakeMessage)
+            await fakeCommand(message, cmd)
 
 async def sayItsMe(message):
-    l = [
-        "C'est moi !",
-        "Votre maitre répond a l'appel",
-        "Je suis celle dont vous parlez",
-        "Oui, être insignifiant"
-    ]
-    await client.send_message(message.channel, random.choice(l))
+    await bot_send(message.channel, 'bot_hello')
 
 @client.event
 async def on_ready():
@@ -360,19 +371,19 @@ async def on_message(message):
         await client.process_commands(message)
     else:
         if message.author.name in config['reactions']:
-            for emoji in config['reactions'][message.author.name]:
-                await client.add_reaction(message, emoji)
+            for command in config['reactions'][message.author.name]:
+                await fakeCommand(message, command)
 
         if message.author != client.user:
+            if client.user.id in message.raw_mentions:
+                await sayItsMe(message)
+
             for key in config['keywords']:
                 if key.lower() in msg_text:
                     await useKeyword(message, key)
             for key in config['aliases']:
                 if key.lower() in msg_text:
                     await useKeyword(message, config['aliases'][key])
-
-            if client.user.id in message.raw_mentions:
-                await sayItsMe(message)
 
     await quit_music_if_needed()
 
