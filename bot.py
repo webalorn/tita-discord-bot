@@ -250,7 +250,7 @@ async def sendCookie(context, user_name, message=None):
 
 # Reactions
 
-@client.command(name='add-reaction', aliases=['react'])
+@client.command(name='add-reaction', aliases=['react-user'])
 async def add_raction(username, emoji):
     if not username in config['reactions']:
         config['reactions'][username] = []
@@ -262,7 +262,12 @@ async def add_raction(username, emoji):
 async def add_raction(username):
     if username in config['reactions']:
         del config['reactions'][username]
+        save_config()
     await client.say("Je serais dorénavant de marbre face à {0}".format(username))
+
+@client.command(name='add-reaction-message', aliases=['react'], pass_context=True)
+async def reactMessage(context, emoji):
+    await client.add_reaction(context.message, emoji)
     
 # Sepecial messages
 
