@@ -295,7 +295,7 @@ async def getCodeforcesProblem(tag=None):
     if len(problems):
         prob = random.choice(problems)
         print(prob)
-        await client.say('Tient, divertit tes neurones sur celui-ci:')
+        await client.say('Tiens, divertis tes neurones sur celui-ci:')
         await client.say('{2} http://codeforces.com/problemset/problem/{0}/{1}'.format(prob['contestId'], prob['index'], prob['name'], prob['type']))
     else:
         await client.say("Hé, il n'y a aucune problème de ce type !")
