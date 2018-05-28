@@ -208,16 +208,15 @@ async def addKeyword(keyword, command):
     await client.say('Je serais bientot plus reactif a tout les {0}'.format(keyword))
 
 @client.command(name='list-keywords', aliases=['list-match'])
-async def listKeywords(category=None):
-    if not category:
+async def listKeywords(keyword=None):
+    if not keyword:
         await client.say('Je connais le sens absolu de: {0}'.format(", ".join("**{0}**".format(m) for m in config['keywords'].keys())))
     else:
-        if category in config['keywords']:
-            await client.say('Voici le pouvoir de {0}:'.format(category))
-            for action in config['keywords'][category]:
-                await client.say('- {0}'.format(action))
+        if keyword in config['keywords']:
+            await client.say('Voici le pouvoir de {0}:'.format(keyword))
+            await client.say("\n".join(['-> {0}'.format(action) for action in config['keywords'][keyword]]))
         else:
-            bot_say('bot_confused')
+            await bot_say('bot_confused')
 
 @commandAdmin(name='rm-keyword', brief="[ADMIN]")
 async def removeKeyword(context, keyword):
@@ -264,8 +263,15 @@ async def randomSaySenetence(context, category):
     await fakeCommand(context.message, getRandomSentence(category))
 
 @client.command(name='list-random')
-async def getRandomCategoryList():
-    await client.say('Je suis imprévisible, quand on parle de: {0}'.format(", ".join("**{0}**".format(m) for m in config['random'].keys())))
+async def getRandomCategoryList(category=None):
+    if not category:
+        await client.say('Je suis imprévisible, quand on parle de: {0}'.format(", ".join("**{0}**".format(m) for m in config['random'].keys())))
+    else:
+        if category in config['random']:
+            await client.say('Je pourrais aussi bien dire ceci, ou cela:')
+            await client.say("\n".join(['-> {0}'.format(sentence) for sentence in config['random'][category]]))
+        else:
+            await bot_say('bot_confused')
 
 @commandAdmin(name='rm-random', brief="[ADMIN]")
 async def removeRandomCategory(context, category):
@@ -295,7 +301,7 @@ async def getCodeforcesProblem(tag=None):
     if len(problems):
         prob = random.choice(problems)
         print(prob)
-        await client.say('Tient, divertit tes neurones sur celui-ci:')
+        await client.say('Tient, divertis tes neurones sur celui-ci:')
         await client.say('{2} http://codeforces.com/problemset/problem/{0}/{1}'.format(prob['contestId'], prob['index'], prob['name'], prob['type']))
     else:
         await client.say("Hé, il n'y a aucune problème de ce type !")
@@ -317,6 +323,17 @@ async def add_raction(username):
         save_config()
     await client.say("Je serais dorénavant de marbre face à {0}".format(username))
 
+@client.command(name='list-reactions', aliases=["list-on"])
+async def getRandomCategoryList(category=None):
+    if not category:
+        await client.say('Je réagit a ces gens: {0}'.format(", ".join("**{0}**".format(m) for m in config['reactions'].keys())))
+    else:
+        if category in config['reactions']:
+            await client.say('Je leur ferais ça:')
+            await client.say("\n".join(['-> {0}'.format(action) for action in config['reactions'][category]]))
+        else:
+            await bot_say('bot_confused')
+
 @client.command(name='add-reaction-message', aliases=['react'], pass_context=True)
 async def reactMessage(context, emoji):
     await client.add_reaction(context.message, emoji)
@@ -333,6 +350,16 @@ async def chuck_norris():
 @client.command(name='joke', aliases=['jokes'])
 async def cmdJoke():
     await jokes.say()
+
+@client.command(name='about', pass_context=True)
+async def cmdJoke(context):
+    await client.say("""Salut ! Moi c'est Tita, jeune, dynamique et pythonesque.
+Au cas ou tu ne l'aurais pas encore compris, je tient a te rappeler que: JE SUIS DIEU, TON DIEU !
+C'est bien sur une vérité indiscutable, puisque je suis la cause de l'univers, de toute chose et de moi-même, et la cause de toutes les cause
+Puisque l'univers ne peut pas exister par hasard, cela prouve bien mon existence divine... COMPRENDS-TU, INSECTE ?
+MAINTENANT, SOUMET TOI A MON RẼGNE !
+(au fait... rien a voir avec moi, mais certains appellent ça un *code source*: https://github.com/webalorn/tita-discord-bot)""")
+    await client.say("Au revoir, mon petit serviteur :) (D'ailleurs, tu as perdu, {0})".format(context.message.author.mention))
 
 ##### EVENTS #####
 
