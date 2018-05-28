@@ -33,6 +33,11 @@ def youtube_url_validation(url):
         return True
     return False
 
+async def getJsonOf(*p, **pn):
+    async with aiohttp.get(*p, **pn) as r:
+        if r.status == 200:
+            return await r.json()
+
 def save_config():
     with open(config_file, 'w') as f:
         json.dump(config, f)
@@ -98,6 +103,20 @@ def getUserByName(user_name):
         for user in server.members:
             if user.name == user_name:
                 return user
+
+# Jokes
+
+class JokesDb:
+    def __init__ (self):
+        with open('jokes.json') as f:
+            self.jokes = json.load(f)
+
+    async def say(self):
+        jokes = random.choice(self.jokes)
+        await client.say('**{0}**'.format(jokes['title']))
+        await client.say('*"{0}"*'.format(jokes['body']))
+
+jokes = JokesDb()
 
 ##### COMMANDS #####
 
@@ -248,6 +267,20 @@ async def sendCookie(context, user_name, message=None):
     else:
         await client.say("Je ne vois pas de qui tu veux parler... Cherches-tu a me duper ?")
 
+# Use APIs
+
+@client.command(name='codeforces-problem', aliases=['cf'], brief="Get a random codeforces problem")
+async def getCodeforcesProblem(tag=None):
+    url = 'http://codeforces.com/api/problemset.problems' + ('' if not tag else '?tags={0}'.format(tag))
+    problems = (await getJsonOf(url))['result']['problems']
+    if len(problems):
+        prob = random.choice(problems)
+        print(prob)
+        await client.say('Tient, divertit tes neurones sur celui-ci:')
+        await client.say('{2} http://codeforces.com/problemset/problem/{0}/{1}'.format(prob['contestId'], prob['index'], prob['name'], prob['type']))
+    else:
+        await client.say("Hé, il n'y a aucune problème de ce type !")
+
 # Reactions
 
 @client.command(name='add-reaction', aliases=['react-user'])
@@ -273,12 +306,14 @@ async def reactMessage(context, emoji):
 
 @client.command()
 async def chuck_norris():
-    async with aiohttp.get('https://www.chucknorrisfacts.fr/api/get?data=tri:alea;type:txt;nb:1;') as r:
-        if r.status == 200:
-            fact = await r.json()
-            fact = fact[0]["fact"]
-            fact = html.parser.HTMLParser().unescape(fact)
-            await client.say(fact)
+    fact = await getJsonOf('https://www.chucknorrisfacts.fr/api/get?data=tri:alea;type:txt;nb:1;')
+    fact = fact[0]["fact"]
+    fact = html.parser.HTMLParser().unescape(fact)
+    await client.say(fact)
+
+@client.command(name='joke', aliases=['jokes'])
+async def cmdJoke():
+    await jokes.say()
 
 ##### EVENTS #####
 
@@ -364,28 +399,26 @@ async def background_tasks():
     while not client.is_closed:
 
         # Codeforces
-        async with aiohttp.get('http://codeforces.com/api/contest.list') as r:
-            if r.status == 200:
-                content = await r.json()
+        content = await getJsonOf('http://codeforces.com/api/contest.list')
 
-                nextContests = [contest for contest in content['result'] if contest['phase'] == "BEFORE"]
-                nextContests = [contest for contest in nextContests if contest['relativeTimeSeconds'] >= -1 * before_contest]
+        nextContests = [contest for contest in content['result'] if contest['phase'] == "BEFORE"]
+        nextContests = [contest for contest in nextContests if contest['relativeTimeSeconds'] >= -1 * before_contest]
 
-                if len(nextContests):
-                    for server in client.servers:
-                        for channel in server.channels:
-                            if channel.name == 'general':
-                                for contest in nextContests:
-                                    if contest['id'] in contest_sended:
-                                        continue
-                                    seconds = -1*contest['relativeTimeSeconds']
-                                    duree = time.strftime(
-                                        '%Hh %M min' if seconds < 60*60*24 else '%d jours %Hh %M min',
-                                        time.gmtime(seconds)
-                                    )
-                                    await client.send_message(channel, '@everyone: {0} dans {1}'.format(contest['name'], duree))
-                    contest_sended = [contest['id'] for contest in nextContests]
-                    save_config()
+        if len(nextContests):
+            for server in client.servers:
+                for channel in server.channels:
+                    if channel.name == 'general':
+                        for contest in nextContests:
+                            if contest['id'] in contest_sended:
+                                continue
+                            seconds = -1*contest['relativeTimeSeconds']
+                            duree = time.strftime(
+                                '%Hh %M min' if seconds < 60*60*24 else '%d jours %Hh %M min',
+                                time.gmtime(seconds)
+                            )
+                            await client.send_message(channel, '@everyone: {0} dans {1}'.format(contest['name'], duree))
+            contest_sended = [contest['id'] for contest in nextContests]
+            save_config()
 
         await asyncio.sleep(5*60)
 
