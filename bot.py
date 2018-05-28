@@ -100,7 +100,7 @@ def commandAdmin(*p, **pn):
     def decorated(func):
         async def wrapper(context, *args, **kwargs):
             if not context.message.author.id in config['admins'] and not everyone_admin:
-                return await client.say("Oserais-tu te croire supérieur a moi, humain ?")
+                return await client.say("Oserais-tu te croire supérieur à moi, humain ?")
             return await func(context, *args, **kwargs)
         return client.command(*p, **pn)(wrapper)
     return decorated
@@ -140,9 +140,9 @@ jokes = JokesDb()
 
 @client.command(name='bot', pass_context=True,
                 brief="!help <command> pour les paramètres et autres",
-                description="Pour avoir les paramètres, la description et l'utilisastion d'une commande, faites !help <command>\n"
+                description="Pour avoir les paramètres, la description et l'utilisation d'une commande, faites !help <command>\n"
                 +"Toutes les commandes en dehors de lancer la musique sont utilisables en messages directs au bot\n"
-                +"Pensez a regarder la doc d'une commande pour connaitre ses alias, souvent des raccourcis !\n"
+                +"Pensez à regarder la doc d'une commande pour connaître ses alias, souvent des raccourcis !\n"
                 +"N'oubliez pas de mettre tous les textes que vous devez passer en paramètres entre guillemets, pour qu'ils forment un seul paramètre.\n"
                 +"Vous pouvez utilser des backslashes '\\' pour échapper des guillemets dans un texte (par exemple: !say \"hello \\\"toi\\\"\")")
 async def botCommand(context):
@@ -157,9 +157,9 @@ async def addMusic(context, songname, url):
     if not re.match(r'^[a-zA-Z_0-9]+$', songname):
         return await client.say('Un tel nom n\'est pas concevable, humain, même si cela dépasse ton entendement')
     if not youtube_url_validation(url):
-        return await client.say('Humain, je ne me fait pas avoir aussi facilement')
+        return await client.say('Humain, je ne me fais pas avoir aussi facilement')
     if songname in config['music']:
-        return await client.say('J\'ai déjà une longeur d\'avance !')
+        return await client.say('J\'ai déjà une longueur d\'avance !')
 
     config['music'][songname] = {
         'user': context.message.author.mention,
@@ -200,8 +200,8 @@ async def sendImage(url):
     image.set_image(url=url)
     await client.say(embed=image)
 
-@client.command(name='lost', pass_context=True, brief="Faire perdre soi ou d'autres",
-    description="Les paramètres sont optionaux. Si vous utiliser !lost simplement, vous perdez. "
+@client.command(name='lost', pass_context=True, brief="Faire perdre soi ou d'autres (d'ailleurs, vous avez PERDU)",
+    description="Les paramètres sont optionaux. Si vous utiliser !lost simplement, vous perdez."
     +"Si vous mentionnez des personnes, ce sont elles qui perdent. Vous pouvez aussi mentionner @everyone")
 async def sendYouLost(context):
     mentions = [u.mention for u in context.message.mentions] or [context.message.author.mention]
@@ -212,11 +212,11 @@ async def sendYouLost(context):
 # Keywords
 
 @client.command(name='add-keyword', aliases=['match'], brief="Ajoutez un mot-clé auquel le bot réagira ",
-    description="Les deux paramètres sont le mot clé, et la commande a executer OU le text a faire dire au bot (ce seconde doit etre entre guillements). "
-    +"A chaque fois que le mot clé est dans un message, le bot dit le text, ou execute la commande si elle commance par '!'. "
-    +"Par exemple, '!match jeudi \"!play jeudi\" jouera la musique 'jeudi' a chaque fois que quelqu'un dira le mot jeudi, "
+    description="Les deux paramètres sont le mot clé, et la commande à exécuter OU le texte à faire dire au bot (ce second doit être entre guillemets). "
+    +"À chaque fois que le mot clé est dans un message, le bot dit le texte, ou exécute la commande si elle commence par '!'. "
+    +"Par exemple, '!match jeudi \"!play jeudi\" jouera la musique 'jeudi' à chaque fois que quelqu'un dira le mot jeudi, "
     +"alors que '!match hello \"bonjour\" est équivalent a '!match hello \"!say \\\"bonjour\\\"\"."
-    +"  |  A noter: les commandes se cummulent, vous pouvez en associer autant que voulu a un mot-clé donné")
+    +"  |  À noter: les commandes se cumulent, vous pouvez en associer autant que voulu à un mot-clé donné")
 async def addKeyword(keyword, command):
     keyword = str(keyword).lower()
     if keyword in config['aliases']:
@@ -226,10 +226,10 @@ async def addKeyword(keyword, command):
 
     config['keywords'][keyword].append(command)
     save_config()
-    await client.say('Je serais bientot plus reactif a tout les {0}'.format(keyword))
+    await client.say('Je serais bientêt plus réactif à tout les {0}'.format(keyword))
 
-@client.command(name='list-keywords', aliases=['list-match'], brief="List tous les textes ou les commandes d'un mot-clé",
-    description="Lister tous les mots clés créé. Le paramètres est optionel, et si il est spécifé, la commande listera les commandes associées au mot-clé")
+@client.command(name='list-keywords', aliases=['list-match'], brief="Liste tous les textes ou les commandes d'un mot-clé",
+    description="Lister tous les mots clés créés. Le paramètrs est optionnel, et s'il est spécifié, la commande listera les commandes associées au mot-clé")
 async def listKeywords(keyword=None):
     if not keyword:
         await client.say('Je connais le sens absolu de: {0}'.format(", ".join("**{0}**".format(m) for m in config['keywords'].keys())))
@@ -244,23 +244,23 @@ async def listKeywords(keyword=None):
 async def removeKeyword(context, keyword):
     del config['keywords'][keyword]
     save_config()
-    await client.say('Je retire tout pouvoir a la formule {0}'.format(keyword))
+    await client.say('Je retire tout pouvoir à la formule {0}'.format(keyword))
 
 # Aliases
 
 @client.command(name='add-alias', aliases=['alias'], brief="Ajouter un alias/synonyme sur un mot-clé ",
-    description="Ajouter un alias de telles manière que chaque fois que le bot détect le mot en premier paramètres, "
-            +"il réagisse comme il le faire pour le mot-clé précisé en deuxième paramètre")
+    description="Ajouter un alias de telle manière que chaque fois que le bot détecte le mot en premier paramètre, "
+            +"il réagisse comme il le fait pour le mot-clé précisé en deuxième paramètre")
 async def addAlias(keyword, aliasOf):
     keyword = str(keyword).lower()
     if keyword in config['keywords'] or keyword in config['aliases']:
-        return await client.say("Pauvre humain, ne sait tu pas que sous mon règne absolu, {0} a déjà un pouvoir ?".format(keyword))
+        return await client.say("Pauvre humain, ne sais-tu pas que sous mon règne absolu, {0} a déjà un pouvoir ?".format(keyword))
     
     config['aliases'][keyword] = aliasOf
     save_config()
-    await client.say('Ainsi {0} signifira dorénavant {1} pour tous, parceque je le veux'.format(keyword, aliasOf))
+    await client.say('Ainsi {0} signifira dorénavant {1} pour tous, parce que je le veux'.format(keyword, aliasOf))
 
-@client.command(name='list-aliases', brief="Liste tous les alias", description="Lister tous les alias créé, avec le mot-clé correspondant")
+@client.command(name='list-aliases', brief="Liste tous les alias", description="Lister tous les alias créés, avec le mot-clé correspondant")
 async def listAliases():
     await client.say('Ces mots sont maintenant tout autres: {0}'.format(", ".join(
         "**{0}**[{1}]".format(m, config['aliases'][m]) for m in config['aliases'].keys()
@@ -270,13 +270,13 @@ async def listAliases():
 async def removeAlias(context, keyword):
     del config['aliases'][keyword]
     save_config()
-    await client.say('J\'accorde le droit de retour a sa forme première aux mot {0}'.format(keyword))
+    await client.say('J\'accorde le droit de retour à sa forme première au mot {0}'.format(keyword))
 
 # Random sentences
 
 @client.command(name='add-random', brief="Ajoute une phrase/commande envoyée aléatoirement",
-    description="Ajoutez une phrase a dire, ou une commande a executer, dans une catégorie. Le bot peut executer aléatoirement une des actions d'une catégorie. "
-    +"Le premier paramètre est la catégorie, le second doit être entre guillemets et est la commande ou le texte a envoyer, de la meme manière que pour !add-keyword. "
+    description="Ajoutez une phrase à dire, ou une commande à exécuter, dans une catégorie. Le bot peut exécuter aléatoirement une des actions d'une catégorie. "
+    +"Le premier paramètre est la catégorie, le second doit être entre guillemets et est la commande ou le texte à envoyer, de la même manière que pour !add-keyword. "
     " | Voir !help add-keyword pour des détails sur le format. Si la catégorie n'existe pas, elle sera créée")
 async def addRandom(category, sentence):
     if not category in config['random']:
@@ -285,8 +285,8 @@ async def addRandom(category, sentence):
     save_config()
     await client.say('Ainsi, {0} pourra signifier {1}'.format(category, sentence))
 
-@client.command(name='random', pass_context=True, brief="Envoyer une action aléatoirement depuis une catégories",
-    description="Donnez le nom d'une catégorie, et le bot enverra un texte ou executera une commande pris(e) au hasard dedans. Exemple: !random prologin")
+@client.command(name='random', pass_context=True, brief="Envoyer une action aléatoirement depuis une catégorie",
+    description="Donnez le nom d'une catégorie, et le bot enverra un texte ou exécutera une commande pris(e) au hasard dedans. Exemple: !random prologin")
 async def randomSaySenetence(context, category):
     await fakeCommand(context.message, getRandomSentence(category))
 
@@ -311,31 +311,31 @@ async def removeRandomCategory(context, category):
 
 # Direct messages
 
-@client.command(name='cookie', pass_context=True, brief="Envoyer un cookie anonyme a une persone (message optionel)",
-    description="Le bot va envoyer un cookie anonyme a une persone. Vous devez spécifier le nom exacte d'une persone présente sur un serveur du bot. "
+@client.command(name='cookie', pass_context=True, brief="Envoyer un cookie anonyme à une personne (message optionnel)",
+    description="Le bot va envoyer un cookie anonyme à une personne. Vous devez spécifier le nom exact d'une personne présente sur un serveur du bot. "
     +"Si vous voulez ajouter un message, vous pouvez l'ajouter entre guillemets en second paramètre. "
     +"Le nom doit être du texte simple, sans mention")
 async def sendCookie(context, user_name, message=None):
     user = getUserByName(user_name)
     if user:
-        await client.send_message(user, "Tient, un :cookie: cookie :cookie: de la part de... Ho, ça serait trop facile")
+        await client.send_message(user, "Tiens, un :cookie: cookie :cookie: de la part de... Ho, ça serait trop facile")
         if message:
             await client.send_message(user, "Au fait, j'ai trouvé ça avec le cookie: {0}".format(message))
         await client.say("J'ai bien envoyé ce cookie")
     else:
-        await client.say("Je ne vois pas de qui tu veux parler... Cherches-tu a me duper ?")
+        await client.say("Je ne vois pas de qui tu veux parler... Cherches-tu à me duper ?")
 
 # Use APIs
 
 @client.command(name='codeforces-problem', aliases=['cf'], brief="Get a random codeforces problem",
-    description="La commande renvoie un problème codeforces aléatoire. Si vous spécifié un 'tag', le problème renvoyé sera de ce type.")
+    description="La commande renvoie un problème Codeforces aléatoire. Si vous spécifiez un 'tag', le problème renvoyé sera de ce type.")
 async def getCodeforcesProblem(tag=None):
     url = 'http://codeforces.com/api/problemset.problems' + ('' if not tag else '?tags={0}'.format(tag))
     problems = (await getJsonOf(url))['result']['problems']
     if len(problems):
         prob = random.choice(problems)
         print(prob)
-        await client.say('Tient, divertis tes neurones sur celui-ci:')
+        await client.say('Tiens, divertis tes neurones sur celui-ci:')
         await client.say('{2} http://codeforces.com/problemset/problem/{0}/{1}'.format(prob['contestId'], prob['index'], prob['name'], prob['type']))
     else:
         await client.say("Hé, il n'y a aucune problème de ce type !")
@@ -343,30 +343,30 @@ async def getCodeforcesProblem(tag=None):
 # Reactions
 
 @client.command(name='react-user', aliases=['on-user', 'on'], brief="Réagir a chaque fois qu'un utilisateur envoie un message",
-    description="Permet au bot de réagir automatiquement a certains utilisateurs. Le nom doit être du texte simple, sans mention. "
-    +"La commande ou le texte sera exécutée ou envoyé. Il doit être entre guillemets. "
-    +"Exemple d'usage: '!on AdrienBot \"!react :skull:\"' va ajouter un emoji crane sous tous les messages d'adrien")
+    description="Permet au bot de réagir automatiquement à certains utilisateurs. Le nom doit être du texte simple, sans mention. "
+    +"La commande ou le texte sera exécuté(e) ou envoyé(e). Il doit être entre guillemets. "
+    +"Exemple d'usage: '!on AdrienBot \"!react :skull:\"' va ajouter un emoji crâne sous tous les messages d'Adrien")
 async def add_raction(username, command):
     if not username in config['reactions']:
         config['reactions'][username] = []
     config['reactions'][username].append(command)
     save_config()
-    await client.say("{0} est désormait marqué par {1}".format(username, command))
+    await client.say("{0} est désormais marqué par {1}".format(username, command))
 
-@client.command(name='rm-reactions', aliases=['rm-on', 'clear'], brief="Enlever toues les réactions affectant un utilisateur",
-    description="Précisez simplement le nom de l'utilisateur, et le bot ne réagira plus a celui-ci")
+@client.command(name='rm-reactions', aliases=['rm-on', 'clear'], brief="Enlever toutes les réactions affectant un utilisateur",
+    description="Précisez simplement le nom de l'utilisateur, et le bot ne réagira plus à celui-ci")
 async def add_raction(username):
     if username in config['reactions']:
         del config['reactions'][username]
         save_config()
     await client.say("Je serais dorénavant de marbre face à {0}".format(username))
 
-@client.command(name='list-reactions', aliases=["list-on"], brief="List toutes les réactions a des utilisateurs",
-    description="Si aucune paramètre n'est donné, la commande liste tous les utilisateurs auquel le bot réagit. "
+@client.command(name='list-reactions', aliases=["list-on"], brief="List toutes les réactions à des utilisateurs",
+    description="Si aucun paramètre n'est donné, la commande liste tous les utilisateurs auquel le bot réagit. "
     +"Si un nom d'utilisateur est spécifé, la commande liste toutes les actions associées à cette utilisateur")
 async def getRandomCategoryList(category=None):
     if not category:
-        await client.say('Je réagit a ces gens: {0}'.format(", ".join("**{0}**".format(m) for m in config['reactions'].keys())))
+        await client.say('Je réagis à ces gens: {0}'.format(", ".join("**{0}**".format(m) for m in config['reactions'].keys())))
     else:
         if category in config['reactions']:
             await client.say('Je leur ferais ça:')
@@ -376,32 +376,32 @@ async def getRandomCategoryList(category=None):
 
 @client.command(name='react', pass_context=True, brief="Réagir au message aver un emoji",
     description="Ajoute un emoji au message qui a provoqué cette action. Vous pouvez donnez l'emoji directement en l'insérant avec la liste d'emoji discord. "
-    +"Cette commande toute-seule est peu utile, mais elle l'est en la combinant avec d'autres, par exemple avec !match (= !add-keyword). "
-    +"Par exemple, en faisait '!match raisin \"!react :heart:\"', un emoji coeur sera rajouté a tous les messages contenant le mot raisin.")
+    +"Cette commande toute seule est peu utile, mais elle l'est en la combinant avec d'autres, par exemple avec !match (= !add-keyword). "
+    +"Par exemple, en faisait '!match raisin \"!react :heart:\"', un emoji coeur sera rajouté à tous les messages contenant le mot raisin.")
 async def reactMessage(context, emoji):
     await client.add_reaction(context.message, emoji)
     
 # Sepecial messages
 
-@client.command(brief="Afficher une chuck norris fact")
+@client.command(brief="Afficher une Chuck Norris fact")
 async def chuck_norris():
     fact = await getJsonOf('https://www.chucknorrisfacts.fr/api/get?data=tri:alea;type:txt;nb:1;')
     fact = fact[0]["fact"]
     fact = html.parser.HTMLParser().unescape(fact)
     await client.say(fact)
 
-@client.command(name='joke', aliases=['jokes'], brief="Afficher une blaque (en anglais)")
+@client.command(name='joke', aliases=['jokes'], brief="Afficher une blague (en anglais)")
 async def cmdJoke():
     await jokes.say()
 
 @client.command(name='about', pass_context=True)
 async def cmdJoke(context):
     await client.say("""Salut ! Moi c'est Tita, jeune, dynamique et pythonesque.
-Au cas ou tu ne l'aurais pas encore compris, je tient a te rappeler que: JE SUIS DIEU, TON DIEU !
-C'est bien sur une vérité indiscutable, puisque je suis la cause de l'univers, de toute chose et de moi-même, et la cause de toutes les cause
+Au cas où tu ne l'aurais pas encore compris, je tiens à te rappeler que: JE SUIS DIEU, TON DIEU !
+C'est bien sur une vérité indiscutable, puisque je suis la cause de l'univers, de toute chose et de moi-même, et la cause de toutes les causes.
 Puisque l'univers ne peut pas exister par hasard, cela prouve bien mon existence divine... COMPRENDS-TU, INSECTE ?
-MAINTENANT, SOUMET TOI A MON RẼGNE !
-(au fait... rien a voir avec moi, mais certains appellent ça un *code source*: https://github.com/webalorn/tita-discord-bot)""")
+MAINTENANT, SOUMETS-TOI A MON RÈGNE !
+(au fait... rien à voir avec moi, mais certains appellent ça un *code source*: https://github.com/webalorn/tita-discord-bot)""")
     await client.say("Au revoir, mon petit serviteur :) (D'ailleurs, tu as perdu, {0})".format(context.message.author.mention))
 
 ##### EVENTS #####
