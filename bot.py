@@ -127,12 +127,16 @@ async def bot_send(channel, random_category, *p, **pn):
 class JokesDb:
     def __init__ (self):
         with open('jokes.json') as f:
+            wrongWords = ['sex', 'dick', 'fuck', 'ass', 'ejacul', 'porn', 'nsfw', 'anus', 'felch', 'cum', 'cunt', 'tit', 'gay', 'lesbian', 'homosex', 'heterosex',
+            '**']
             self.jokes = json.load(f)
+            print("1", len(self.jokes))
+            self.jokes = list(filter(lambda b: len([w for w in wrongWords if (w in b['title'].lower() or w in b['body'].lower())]) == 0, self.jokes))
+            print("2", len(self.jokes))
 
     async def say(self):
         jokes = random.choice(self.jokes)
-        await client.say('**{0}**'.format(jokes['title']))
-        await client.say('*"{0}"*'.format(jokes['body']))
+        await client.say('**{0}**\n*"{1}"*'.format(jokes['title'], jokes['body']))
 
 jokes = JokesDb()
 
@@ -353,7 +357,7 @@ async def add_raction(username, command):
     save_config()
     await client.say("{0} est désormait marqué par {1}".format(username, command))
 
-@client.command(name='rm-reactions', aliases=['rm-on', 'clear'], brief="Enlever toues les réactions affectant un utilisateur",
+@client.command(name='rm-reactions', aliases=['rm-on', 'clear'], brief="Enlever toutes les réactions affectant un utilisateur",
     description="Précisez simplement le nom de l'utilisateur, et le bot ne réagira plus a celui-ci")
 async def add_raction(username):
     if username in config['reactions']:
@@ -374,7 +378,7 @@ async def getRandomCategoryList(category=None):
         else:
             await bot_say('bot_confused')
 
-@client.command(name='react', pass_context=True, brief="Réagir au message aver un emoji",
+@client.command(name='react', pass_context=True, brief="Réagir au message avec un emoji",
     description="Ajoute un emoji au message qui a provoqué cette action. Vous pouvez donnez l'emoji directement en l'insérant avec la liste d'emoji discord. "
     +"Cette commande toute-seule est peu utile, mais elle l'est en la combinant avec d'autres, par exemple avec !match (= !add-keyword). "
     +"Par exemple, en faisait '!match raisin \"!react :heart:\"', un emoji coeur sera rajouté a tous les messages contenant le mot raisin.")
@@ -390,7 +394,7 @@ async def chuck_norris():
     fact = html.parser.HTMLParser().unescape(fact)
     await client.say(fact)
 
-@client.command(name='joke', aliases=['jokes'], brief="Afficher une blaque (en anglais)")
+@client.command(name='joke', aliases=['jokes'], brief="Afficher une blague (en anglais)")
 async def cmdJoke():
     await jokes.say()
 
