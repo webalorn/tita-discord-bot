@@ -127,14 +127,11 @@ async def bot_send(channel, random_category, *p, **pn):
 class JokesDb:
     def __init__ (self):
         with open('jokes.json') as f:
-            wrongWords = ['sex', 'dick', 'fuck', 'ass', 'ejacul', 'porn', 'nsfw', 'anus', 'felch', 'cum', 'cunt', 'tit', 'gay', 'lesbian', 'homosex', 'heterosex',
-            '**']
             self.jokes = json.load(f)
-            self.jokes = list(filter(lambda b: len([w for w in wrongWords if (w in b['title'].lower() or w in b['body'].lower())]) == 0, self.jokes))
 
     async def say(self):
         jokes = random.choice(self.jokes)
-        await client.say('**{0}**\n*"{1}"*'.format(jokes['title'], jokes['body']))
+        await client.say('**{0}**\n*" {1} "*'.format(jokes['title'], jokes['body'].strip()))
 
 jokes = JokesDb()
 
@@ -408,16 +405,16 @@ MAINTENANT, SOUMETS-TOI A MON RÈGNE !
 
 ##### EVENTS #####
 
-lastUsedWord = {}
+#lastUsedWord = {}
 async def useKeyword(message, key):
     if key in config['keywords']:
-        user_id = str(message.author.id)
+        """user_id = str(message.author.id)
         if not key in lastUsedWord:
             lastUsedWord[key] = {}
         if user_id in lastUsedWord[key] and time.time() - lastUsedWord[key][user_id] < keywords_delay:
             return
 
-        lastUsedWord[key][user_id] = time.time()
+        lastUsedWord[key][user_id] = time.time()"""
         for cmd in config['keywords'][key]:
             await fakeCommand(message, cmd)
 
@@ -433,6 +430,9 @@ async def on_ready():
 @client.event
 async def on_message(message):
     global musicChannel, musicPlayer
+
+    if '450365871572123668' in [r.id for r in message.author.roles]:
+        return
 
     if message.channel.is_private:
         print(message.author.name, ':', message.content)
