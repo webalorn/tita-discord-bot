@@ -345,7 +345,7 @@ async def getCodeforcesProblem(tag=None):
 @client.command(name='react-user', aliases=['on-user', 'on'], brief="Réagir a chaque fois qu'un utilisateur envoie un message",
     description="Permet au bot de réagir automatiquement à certains utilisateurs. Le nom doit être du texte simple, sans mention. "
     +"La commande ou le texte sera exécuté(e) ou envoyé(e). Il doit être entre guillemets. "
-    +"Exemple d'usage: '!on AdrienBot \"!react :skull:\"' va ajouter un emoji crâne sous tous les messages d'Adrien")
+    +"Exemple d'usage: '!on AdrienBot \"!react :skull:\"' va ajouter un emoji crâne sous tous les messages d'AdrienBot")
 async def add_raction(username, command):
     if not username in config['reactions']:
         config['reactions'][username] = []
