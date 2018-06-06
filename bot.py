@@ -227,7 +227,7 @@ async def addKeyword(keyword, command):
     save_config()
     await client.say('Je serais bientêt plus réactif à tout les {0}'.format(keyword))
 
-@client.command(name='list-keywords', aliases=['list-match'], brief="Liste tous les textes ou les commandes d'un mot-clé",
+@client.command(name='list-keywords', aliases=['list-match', 'ls-match'], brief="Liste tous les textes ou les commandes d'un mot-clé",
     description="Lister tous les mots clés créés. Le paramètrs est optionnel, et s'il est spécifié, la commande listera les commandes associées au mot-clé")
 async def listKeywords(keyword=None):
     if not keyword:
@@ -239,7 +239,7 @@ async def listKeywords(keyword=None):
         else:
             await bot_say('bot_confused')
 
-@commandAdmin(name='rm-keyword')
+@commandAdmin(name='rm-keyword', aliases=['rm-match'])
 async def removeKeyword(context, keyword):
     del config['keywords'][keyword]
     save_config()
@@ -259,7 +259,7 @@ async def addAlias(keyword, aliasOf):
     save_config()
     await client.say('Ainsi {0} signifira dorénavant {1} pour tous, parce que je le veux'.format(keyword, aliasOf))
 
-@client.command(name='list-aliases', brief="Liste tous les alias", description="Lister tous les alias créés, avec le mot-clé correspondant")
+@client.command(name='list-aliases', aliases=['ls-aliases'], brief="Liste tous les alias", description="Lister tous les alias créés, avec le mot-clé correspondant")
 async def listAliases():
     await client.say('Ces mots sont maintenant tout autres: {0}'.format(", ".join(
         "**{0}**[{1}]".format(m, config['aliases'][m]) for m in config['aliases'].keys()
@@ -289,7 +289,7 @@ async def addRandom(category, sentence):
 async def randomSaySenetence(context, category):
     await fakeCommand(context.message, getRandomSentence(category))
 
-@client.command(name='list-random', brief="List toutes les actions aléatoires",
+@client.command(name='list-random', aliases=['ls-random'], brief="List toutes les actions aléatoires",
     description="Si aucune paramètre n'est donné, la commande liste toutes les catégories d'actions aléatoires créées. "
     +"Si un nom de catégorie est spécifé, la commande liste toutes les actions possibles dans cette catégorie")
 async def getRandomCategoryList(category=None):
@@ -320,9 +320,9 @@ async def sendCookie(context, user_name, message=None):
         await client.send_message(user, "Tiens, un :cookie: cookie :cookie: de la part de... Ho, ça serait trop facile")
         if message:
             await client.send_message(user, "Au fait, j'ai trouvé ça avec le cookie: {0}".format(message))
-        await client.say("J'ai bien envoyé ce cookie")
+        await client.send_message(context.message.author, "J'ai bien envoyé ce cookie ({0})  à {1}".format(message or '', user_name))
     else:
-        await client.say("Je ne vois pas de qui tu veux parler... Cherches-tu à me duper ?")
+        await client.send_message(context.message.author, "Je ne vois pas de qui tu veux parler... Cherches-tu à me duper ?")
 
 # Use APIs
 
@@ -393,6 +393,10 @@ async def chuck_norris():
 async def cmdJoke():
     await jokes.say()
 
+@client.command(name='delete', aliases=['del'], brief="Supprime le message", pass_context=True)
+async def cmdDelete(context):
+    await client.delete_message(context.message)
+
 @client.command(name='about', pass_context=True)
 async def cmdJoke(context):
     await client.say("""Salut ! Moi c'est Tita, jeune, dynamique et pythonesque.
@@ -431,7 +435,7 @@ async def on_ready():
 async def on_message(message):
     global musicChannel, musicPlayer
 
-    if '450365871572123668' in [r.id for r in message.author.roles]:
+    if message.author.bot or message.channel.name in ['discussions']:
         return
 
     if message.channel.is_private:
