@@ -1,4 +1,4 @@
-import random, re, os, json, copy, time
+import random, re, os, sys, json, copy, time
 import html.parser
 import asyncio
 import aiohttp
@@ -8,7 +8,7 @@ from discord.ext.commands import Bot
 
 BOT_PREFIX = ("!")
 keywords_delay = 1
-before_contest = 60*60*2
+before_contest = sorted([60*5, 60*60, 60*60*2, 60*60*24])
 everyone_admin = False
 
 client = Bot(command_prefix=BOT_PREFIX)
@@ -18,7 +18,6 @@ config = {}
 
 musicChannel = None
 musicPlayer = None
-
 
 ##### FUNCTIONS #####
 
@@ -146,6 +145,12 @@ jokes = JokesDb()
                 +"Vous pouvez utilser des backslashes '\\' pour échapper des guillemets dans un texte (par exemple: !say \"hello \\\"toi\\\"\")")
 async def botCommand(context):
     await client.say("Salut !")
+
+@commandAdmin(name='update')
+async def updateBot(context):
+    c = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'start.sh')
+    save_config()
+    os.execl(c, *sys.argv)
 
 # Music
 
@@ -479,7 +484,7 @@ async def quit_voice_channels():
         await quit_music_if_needed()
         await asyncio.sleep(2)
 
-contest_sended = []
+contest_sended_delay = {}
 async def background_tasks():
     global musicChannel, musicPlayer, contest_sended
     await client.wait_until_ready()
@@ -489,25 +494,30 @@ async def background_tasks():
         content = await getJsonOf('http://codeforces.com/api/contest.list')
 
         nextContests = [contest for contest in content['result'] if contest['phase'] == "BEFORE"]
-        nextContests = [contest for contest in nextContests if contest['relativeTimeSeconds'] >= -1 * before_contest]
+        # nextContests = [contest for contest in nextContests if contest['relativeTimeSeconds'] >= -1 * before_contest]
+        notifyContests = []
+        for c in nextContests:
+            for delay in before_contest:
+                if c['relativeTimeSeconds'] >= -delay and (not c['id'] in contest_sended_delay or contest_sended_delay[c['id']] > delay):
+                    contest_sended_delay[c['id']] = delay
+                    notifyContests.append(c)
 
-        if len(nextContests):
-            for server in client.servers:
-                for channel in server.channels:
-                    if channel.name == 'general':
-                        for contest in nextContests:
-                            if contest['id'] in contest_sended:
-                                continue
-                            seconds = -1*contest['relativeTimeSeconds']
-                            duree = time.strftime(
-                                '%Hh %M min' if seconds < 60*60*24 else '%d jours %Hh %M min',
-                                time.gmtime(seconds)
-                            )
-                            await client.send_message(channel, '@everyone: {0} dans {1}'.format(contest['name'], duree))
-            contest_sended = [contest['id'] for contest in nextContests]
-            save_config()
+        for server in client.servers:
+            for channel in server.channels:
+                if channel.name == 'general':
+                    for contest in notifyContests:
+                        seconds = -1*contest['relativeTimeSeconds']
+                        duree = time.strftime(
+                            ('%-M minutes %-S seconds' if seconds < 60*60 else '%-Hh %-M min') if seconds < 60*60*24 else '%-d jours %-Hh %-M min',
+                            time.gmtime(seconds)
+                        )
+                        msg = '@everyone: {0} dans {1}'.format(contest['name'], duree)
+                        if seconds < 60*60*24 and seconds > 5*60:
+                            msg += ' [register at: http://codeforces.com/contestRegistration/{0}]'.format(contest['id'])
+                        await client.send_message(channel, msg)
+        # save_config()
 
-        await asyncio.sleep(5*60)
+        await asyncio.sleep(3*60)
 
 try:
     with open(config_file) as f:
