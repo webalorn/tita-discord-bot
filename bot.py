@@ -8,7 +8,7 @@ from discord.ext.commands import Bot
 
 BOT_PREFIX = ("!")
 keywords_delay = 1
-before_contest = sorted([60*5, 60*60, 60*60*2, 60*60*24])
+before_contest = sorted([60*10, 60*60*2, 60*60*24])
 everyone_admin = False
 
 client = Bot(command_prefix=BOT_PREFIX)
@@ -514,7 +514,10 @@ async def background_tasks():
                         msg = '@everyone: {0} dans {1}'.format(contest['name'], duree)
                         if seconds < 60*60*24 and seconds > 5*60:
                             msg += ' [register at: http://codeforces.com/contestRegistration/{0}]'.format(contest['id'])
-                        await client.send_message(channel, msg)
+                        try:
+                            await client.send_message(channel, msg)
+                        except:
+                            print("Can't send codeforces alert on #{0}".format(channel.name))
         # save_config()
 
         await asyncio.sleep(3*60)
@@ -525,16 +528,9 @@ try:
 except:
     config = {}
 finally:
-    if not 'music' in config:
-        config['music'] = {}
-    if not 'keywords' in config:
-        config['keywords'] = {}
-    if not 'aliases' in config:
-        config['aliases'] = {}
-    if not 'random' in config:
-        config['random'] = {}
-    if not 'reactions' in config:
-        config['reactions'] = {}
+    for dict_key in ['music', 'keywords', 'aliases', 'random', 'reactions', 'enabled']:
+        if not dict_key in config:
+            config[dict_key] = {}
     if not 'admins' in config:
         config['admins'] = ['211191341533757440']
 
