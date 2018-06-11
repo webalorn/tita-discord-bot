@@ -9,7 +9,6 @@ from discord.ext.commands import Bot
 BOT_PREFIX = ("!")
 keywords_delay = 1
 before_contest = sorted([60*10, 60*60*2, 60*60*24])
-everyone_admin = False
 
 client = Bot(command_prefix=BOT_PREFIX)
 
@@ -30,6 +29,14 @@ async def fakeCommand(initialMessage, command):
     fakeMessage.mentions = []
     fakeMessage.mention_everyone = False
     return await client.process_commands(fakeMessage)
+
+def has_auth_on(channel, possible_auths):
+    channel = channel.id
+    if channel in config['enabled']:
+        for auth in possible_auths:
+            if auth in config['enabled'][channel]:
+                return True
+    return False
 
 def youtube_url_validation(url):
     youtube_regex = (
@@ -98,7 +105,7 @@ def commandAdmin(*p, **pn):
     pn['hidden']=True
     def decorated(func):
         async def wrapper(context, *args, **kwargs):
-            if not context.message.author.id in config['admins'] and not everyone_admin:
+            if not context.message.author.id in config['admins']:
                 return await client.say("Oserais-tu te croire supérieur à moi, humain ?")
             return await func(context, *args, **kwargs)
         return client.command(*p, **pn)(wrapper)
@@ -151,6 +158,36 @@ async def updateBot(context):
     c = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'start.sh')
     save_config()
     os.execl(c, *sys.argv)
+
+@commandAdmin(name='enable', description="Enable: cf (codeforces alerts), all (commands and matchs), cmd (commands), match (matchs), react")
+async def enableOnChannel(context, *auths):
+    if not context.message.channel.is_private:
+        channelId = context.message.channel.id
+        if not channelId in config['enabled']:
+            config['enabled'][channelId] = []
+
+        for auth in auths:
+            if not auth in config['enabled'][channelId]:
+                config['enabled'][channelId].append(auth)
+        save_config()
+        await client.say('Activé')
+
+@commandAdmin(name='disable')
+async def disableOnChannel(context, *auths):
+    if not context.message.channel.is_private:
+        channelId = context.message.channel.id
+        for auth in auths:
+            if channelId in config['enabled'] and auth in config['enabled'][channelId]:
+                config['enabled'][channelId].remove(auth)
+        save_config()
+        await client.say('Désactivé')
+
+@commandAdmin(name='permissions', aliases=['auths'])
+async def listAuthsOnChannel(context, *auths):
+    if not context.message.channel.is_private:
+        channelId = context.message.channel.id
+        auths = config['enabled'][channelId] if channelId in config['enabled'] else []
+        await client.say('permissons: {0}'.format(", ".join(sorted(auths))))
 
 # Music
 
@@ -440,7 +477,7 @@ async def on_ready():
 async def on_message(message):
     global musicChannel, musicPlayer
 
-    if message.author.bot or message.channel.name in ['discussions']:
+    if message.author.bot:
         return
 
     if message.channel.is_private:
@@ -449,34 +486,28 @@ async def on_message(message):
     msg_text = message.clean_content.lower()
 
     if msg_text[:1] in BOT_PREFIX:
-        await client.process_commands(message)
+        if has_auth_on(message.channel, ['cmd', 'all']) or message.author.id in config['admins']:
+            await client.process_commands(message)
     else:
-        if message.author.name in config['reactions']:
+        if message.author.name in config['reactions'] and has_auth_on(message.channel, ['react', 'all']):
             for command in config['reactions'][message.author.name]:
                 await fakeCommand(message, command)
 
         if message.author != client.user:
-            if client.user.id in message.raw_mentions:
+            if client.user.id in message.raw_mentions and has_auth_on(message.channel, ['react', 'all']):
                 await sayItsMe(message)
 
-            for key in config['keywords']:
-                if key.lower() in msg_text:
-                    await useKeyword(message, key)
-            for key in config['aliases']:
-                if key.lower() in msg_text:
-                    await useKeyword(message, config['aliases'][key])
+            if has_auth_on(message.channel, ['match', 'all']):
+                for key in config['keywords']:
+                    if key.lower() in msg_text:
+                        await useKeyword(message, key)
+                for key in config['aliases']:
+                    if key.lower() in msg_text:
+                        await useKeyword(message, config['aliases'][key])
 
     await quit_music_if_needed()
 
 # Background tasks
-
-async def list_servers():
-    await client.wait_until_ready()
-    while not client.is_closed:
-        print("Current servers:")
-        for server in client.servers:
-            print(server.name)
-        await asyncio.sleep(600)
 
 async def quit_voice_channels():
     await client.wait_until_ready()
@@ -485,7 +516,7 @@ async def quit_voice_channels():
         await asyncio.sleep(2)
 
 contest_sended_delay = {}
-async def background_tasks():
+async def background_tasks_codeforces():
     global musicChannel, musicPlayer, contest_sended
     await client.wait_until_ready()
     while not client.is_closed:
@@ -504,7 +535,7 @@ async def background_tasks():
 
         for server in client.servers:
             for channel in server.channels:
-                if channel.name == 'general':
+                if has_auth_on(channel, ['cf']):
                     for contest in notifyContests:
                         seconds = -1*contest['relativeTimeSeconds']
                         duree = time.strftime(
@@ -534,7 +565,6 @@ finally:
     if not 'admins' in config:
         config['admins'] = ['211191341533757440']
 
-# client.loop.create_task(list_servers())
 client.loop.create_task(quit_voice_channels())
-client.loop.create_task(background_tasks())
+client.loop.create_task(background_tasks_codeforces())
 client.run(input())
