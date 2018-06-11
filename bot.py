@@ -31,6 +31,8 @@ async def fakeCommand(initialMessage, command):
     return await client.process_commands(fakeMessage)
 
 def has_auth_on(channel, possible_auths):
+    if channel.is_private:
+        return True
     channel = channel.id
     if channel in config['enabled']:
         for auth in possible_auths:
@@ -515,42 +517,51 @@ async def quit_voice_channels():
         await quit_music_if_needed()
         await asyncio.sleep(2)
 
-contest_sended_delay = {}
 async def background_tasks_codeforces():
     global musicChannel, musicPlayer, contest_sended
     await client.wait_until_ready()
     while not client.is_closed:
 
         # Codeforces
-        content = await getJsonOf('http://codeforces.com/api/contest.list')
+        content = None
+        try:
+            content = await getJsonOf('http://codeforces.com/api/contest.list')
+        except Exception as e:
+            print('Codeforces API call error:', e)
+            continue
 
         nextContests = [contest for contest in content['result'] if contest['phase'] == "BEFORE"]
-        # nextContests = [contest for contest in nextContests if contest['relativeTimeSeconds'] >= -1 * before_contest]
-        notifyContests = []
-        for c in nextContests:
-            for delay in before_contest:
-                if c['relativeTimeSeconds'] >= -delay and (not c['id'] in contest_sended_delay or contest_sended_delay[c['id']] > delay):
-                    contest_sended_delay[c['id']] = delay
-                    notifyContests.append(c)
 
         for server in client.servers:
-            for channel in server.channels:
-                if has_auth_on(channel, ['cf']):
-                    for contest in notifyContests:
-                        seconds = -1*contest['relativeTimeSeconds']
-                        duree = time.strftime(
-                            ('%-M minutes %-S seconds' if seconds < 60*60 else '%-Hh %-M min') if seconds < 60*60*24 else '%-d jours %-Hh %-M min',
-                            time.gmtime(seconds)
-                        )
-                        msg = '@everyone: {0} dans {1}'.format(contest['name'], duree)
-                        if seconds < 60*60*24 and seconds > 5*60:
-                            msg += ' [register at: http://codeforces.com/contestRegistration/{0}]'.format(contest['id'])
-                        try:
-                            await client.send_message(channel, msg)
-                        except:
-                            print("Can't send codeforces alert on #{0}".format(channel.name))
-        # save_config()
+            for channel in [c for c in server.channels if has_auth_on(c, ['cf'])]:
+                if not channel.id in config['contests']:
+                    config['contests'][channel.id] = {}
+                channelCfg = config['contests'][channel.id]
 
+                notifyContests = []
+
+                for c in nextContests:
+                    for delay in before_contest:
+                        contestId = str(c['id'])
+                        if c['relativeTimeSeconds'] >= -delay and (not contestId in channelCfg or channelCfg[contestId] > delay):
+                            channelCfg[contestId] = delay
+                            notifyContests.append(c)
+
+                for contest in notifyContests:
+                    seconds = -1*contest['relativeTimeSeconds']
+                    duree = time.strftime(
+                        ('%-M minutes %-S seconds' if seconds < 60*60 else '%-Hh %-M min') if seconds < 60*60*24 else '%-d jours %-Hh %-M min',
+                        time.gmtime(seconds)
+                    )
+                    msg = '@everyone: {0} dans {1}'.format(contest['name'], duree)
+                    if seconds < 60*60*24 and seconds > 5*60:
+                        msg += ' [register at: http://codeforces.com/contestRegistration/{0}]'.format(contest['id'])
+                    try:
+                        await client.send_message(channel, msg)
+                    except Exception as e:
+                        print("Can't send codeforces alert on #{0} :".format(channel.name), e)
+
+        save_config()
         await asyncio.sleep(3*60)
 
 try:
@@ -559,7 +570,7 @@ try:
 except:
     config = {}
 finally:
-    for dict_key in ['music', 'keywords', 'aliases', 'random', 'reactions', 'enabled']:
+    for dict_key in ['music', 'keywords', 'aliases', 'random', 'reactions', 'enabled', 'contests']:
         if not dict_key in config:
             config[dict_key] = {}
     if not 'admins' in config:
