@@ -9,6 +9,7 @@ from discord.ext.commands import Bot
 BOT_PREFIX = ("!")
 keywords_delay = 1
 before_contest = sorted([60*10, 60*60*2, 60*60*24])
+everyoneAdmin = True
 
 client = Bot(command_prefix=BOT_PREFIX)
 
@@ -103,11 +104,12 @@ async def playYoutubeMusic(url, channels):
 
 def commandAdmin(*p, **pn):
     pn['pass_context'] = True
-    pn['brief']="[ADMIN]"
-    pn['hidden']=True
+    if not everyoneAdmin:
+        pn['brief']="[ADMIN]"
+    pn['hidden']=not everyoneAdmin
     def decorated(func):
         async def wrapper(context, *args, **kwargs):
-            if not context.message.author.id in config['admins']:
+            if not context.message.author.id in config['admins'] and not everyoneAdmin:
                 return await client.say("Oserais-tu te croire supérieur à moi, humain ?")
             return await func(context, *args, **kwargs)
         return client.command(*p, **pn)(wrapper)
@@ -454,8 +456,19 @@ MAINTENANT, SOUMETS-TOI A MON RÈGNE !
 ##### EVENTS #####
 
 #lastUsedWord = {}
+async def startSubCommands(message, liste):
+    said = []
+    for cmd in liste:
+        if cmd[:1] != BOT_PREFIX:
+            said.append(cmd)
+        else:
+            await fakeCommand(message, cmd)
+    if said:
+        await client.send_message(message.channel, "\n".join(said))
+
 async def useKeyword(message, key):
     if key in config['keywords']:
+        return await startSubCommands(message, config['keywords'][key])
         """user_id = str(message.author.id)
         if not key in lastUsedWord:
             lastUsedWord[key] = {}
@@ -463,8 +476,8 @@ async def useKeyword(message, key):
             return
 
         lastUsedWord[key][user_id] = time.time()"""
-        for cmd in config['keywords'][key]:
-            await fakeCommand(message, cmd)
+        #for cmd in config['keywords'][key]:
+        #    await fakeCommand(message, cmd)
 
 async def sayItsMe(message):
     await bot_send(message.channel, 'bot_hello')
@@ -492,8 +505,9 @@ async def on_message(message):
             await client.process_commands(message)
     else:
         if message.author.name in config['reactions'] and has_auth_on(message.channel, ['react', 'all']):
-            for command in config['reactions'][message.author.name]:
-                await fakeCommand(message, command)
+            await startSubCommands(message, config['reactions'][message.author.name])
+            #for command in config['reactions'][message.author.name]:
+            #    await fakeCommand(message, command)
 
         if message.author != client.user:
             if client.user.id in message.raw_mentions and has_auth_on(message.channel, ['react', 'all']):
@@ -518,11 +532,11 @@ async def quit_voice_channels():
         await asyncio.sleep(2)
 
 async def background_tasks_codeforces():
-    global musicChannel, musicPlayer, contest_sended
     await client.wait_until_ready()
     while not client.is_closed:
 
         # Codeforces
+        #TODO: SYSTEM_TEST
         content = None
         try:
             content = await getJsonOf('http://codeforces.com/api/contest.list')
@@ -541,8 +555,8 @@ async def background_tasks_codeforces():
                 notifyContests = []
 
                 for c in nextContests:
+                    contestId = str(c['id'])
                     for delay in before_contest:
-                        contestId = str(c['id'])
                         if c['relativeTimeSeconds'] >= -delay and (not contestId in channelCfg or channelCfg[contestId] > delay):
                             channelCfg[contestId] = delay
                             notifyContests.append(c)
